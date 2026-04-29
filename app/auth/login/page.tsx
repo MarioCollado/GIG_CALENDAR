@@ -1,34 +1,27 @@
 'use client'
 
 import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { login } from './actions'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Mail, Lock, Loader2, ArrowRight, Save } from 'lucide-react'
+import { Mail, Lock, Loader2, Save } from 'lucide-react'
 
 export default function LoginPage() {
-    const [email, setEmail] = useState('')
-    const [password, setPassword] = useState('')
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
-    const supabase = createClient()
     const router = useRouter()
 
-    const handleLogin = async (e: React.FormEvent) => {
-        e.preventDefault()
+    async function handleSubmit(formData: FormData) {
         setLoading(true)
         setError(null)
-
-        const { error } = await supabase.auth.signInWithPassword({
-            email,
-            password,
-        })
-
-        if (error) {
-            setError(error.message)
+        
+        const result = await login(formData)
+        
+        if (result?.error) {
+            setError(result.error)
             setLoading(false)
         } else {
-            router.push('/admin')
+            // El redirect ya lo hace la server action
             router.refresh()
         }
     }
@@ -37,19 +30,18 @@ export default function LoginPage() {
         <main className="min-h-[80vh] flex items-center justify-center p-4">
             <div className="w-full max-w-md space-y-8 bg-white p-8 rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/50">
                 <div className="text-center">
-                    <h1 className="text-4xl font-black tracking-tight text-slate-900 mb-2">BIENVENIDO</h1>
-                    <p className="text-slate-400 text-sm font-bold uppercase tracking-widest">Inicia sesión en tu agenda</p>
+                    <h1 className="text-4xl font-black tracking-tight text-slate-900 mb-2 uppercase">Entrar</h1>
+                    <p className="text-slate-400 text-sm font-bold uppercase tracking-widest italic">Tu agenda te espera</p>
                 </div>
 
-                <form onSubmit={handleLogin} className="space-y-4">
+                <form action={handleSubmit} className="space-y-4">
                     <div className="space-y-2">
                         <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Email</label>
                         <div className="relative">
                             <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                             <input
+                                name="email"
                                 type="email"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
                                 required
                                 className="w-full bg-slate-50 border border-slate-200 p-4 pl-12 rounded-2xl focus:outline-none focus:border-indigo-600 transition-all font-medium"
                                 placeholder="tu@email.com"
@@ -62,9 +54,8 @@ export default function LoginPage() {
                         <div className="relative">
                             <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                             <input
+                                name="password"
                                 type="password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
                                 required
                                 className="w-full bg-slate-50 border border-slate-200 p-4 pl-12 rounded-2xl focus:outline-none focus:border-indigo-600 transition-all font-medium"
                                 placeholder="••••••••"
@@ -73,7 +64,7 @@ export default function LoginPage() {
                     </div>
 
                     {error && (
-                        <div className="bg-rose-50 border border-rose-100 p-4 rounded-2xl text-rose-600 text-xs font-bold uppercase tracking-tight">
+                        <div className="bg-rose-50 border border-rose-100 p-4 rounded-2xl text-rose-600 text-[10px] font-bold uppercase tracking-tight">
                             {error}
                         </div>
                     )}
@@ -86,21 +77,21 @@ export default function LoginPage() {
                         {loading ? (
                             <>
                                 <Loader2 className="animate-spin" size={18} />
-                                Conectando...
+                                Autenticando...
                             </>
                         ) : (
                             <>
                                 <Save size={18} />
-                                Entrar
+                                Iniciar Sesión
                             </>
                         )}
                     </button>
                 </form>
 
                 <div className="text-center pt-4">
-                    <p className="text-slate-400 text-xs font-bold uppercase tracking-tight">
-                        ¿No tienes cuenta?{' '}
-                        <Link href="/auth/signup" className="text-indigo-600 hover:underline">Regístrate</Link>
+                    <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">
+                        ¿Aún no tienes cuenta?{' '}
+                        <Link href="/auth/signup" className="text-indigo-600 hover:underline">Regístrate gratis</Link>
                     </p>
                 </div>
             </div>
