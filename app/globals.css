@@ -1,0 +1,97 @@
+/* app/globals.css - CORREGIDO para Tailwind CSS v4 */
+
+/* Tailwind v4 usa @import en lugar de @tailwind */
+@import "tailwindcss";
+
+/* ============================================
+   ESTILOS ADICIONALES PARA LEAFLET
+   ============================================ */
+
+/* Asegurar que Leaflet ocupe todo el ancho */
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+/* Estilo personalizado para popups - efecto glassmorphism */
+.leaflet-popup-content-wrapper {
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+.leaflet-popup-tip {
+  background: rgba(0, 0, 0, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Animación pulsante para marcadores al hover */
+.leaflet-marker-icon {
+  transition: transform 0.2s ease;
+}
+
+.leaflet-marker-icon:hover {
+  transform: scale(1.2);
+  filter: drop-shadow(0 0 5px rgba(255, 0, 100, 0.8));
+}
+
+/* Estilos para clusters */
+.marker-cluster {
+  background-color: rgba(128, 0, 255, 0.6);
+}
+
+.marker-cluster div {
+  background-color: rgba(128, 0, 255, 0.8);
+  color: white;
+  font-weight: bold;
+}
+
+/* CUSTOM DIV ICON STYLES */
+.custom-div-icon {
+  background: none !important;
+  border: none !important;
+}
+
+.marker-pin {
+  width: 30px;
+  height: 30px;
+  border-radius: 50% 50% 50% 0;
+  background: #6366f1;
+  position: absolute;
+  transform: rotate(-45deg);
+  left: 50%;
+  top: 50%;
+  margin: -15px 0 0 -15px;
+  border: 2px solid white;
+  box-shadow: 0 0 10px rgba(0,0,0,0.2);
+}
+
+.marker-dot {
+  width: 12px;
+  height: 12px;
+  background: white;
+  position: absolute;
+  border-radius: 50%;
+  top: 50%;
+  left: 50%;
+  margin: -6px 0 0 -6px;
+}
+
+.leaflet-marker-icon:hover .marker-pin {
+  background: #4f46e5;
+  transform: rotate(-45deg) scale(1.1);
+}
+
+/* Ajustes responsive para el mapa en móvil */
+@media (max-width: 768px) {
+  .leaflet-popup-content-wrapper {
+    max-width: 280px;
+  }
+
+  .leaflet-popup-content {
+    font-size: 12px;
+  }
+}
