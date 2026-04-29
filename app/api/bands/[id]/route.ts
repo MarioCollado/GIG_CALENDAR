@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase-admin'
 
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params
   const body = await req.json()
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('bands')
     .update(body)
-    .eq('id', params.id)
+    .eq('id', id)
     .select()
     .single()
 
@@ -15,11 +19,15 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   return NextResponse.json(data)
 }
 
-export async function DELETE(_: NextRequest, { params }: { params: { id: string } }) {
-  const { error } = await supabase
+export async function DELETE(
+  _: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params
+  const { error } = await supabaseAdmin
     .from('bands')
     .delete()
-    .eq('id', params.id)
+    .eq('id', id)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
   return new NextResponse(null, { status: 204 })
