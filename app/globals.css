@@ -1,7 +1,55 @@
-/* app/globals.css - CORREGIDO para Tailwind CSS v4 */
-
-/* Tailwind v4 usa @import en lugar de @tailwind */
+/* app/globals.css */
 @import "tailwindcss";
+
+/* ============================================
+   BASE DARK MODE GLOBAL
+   ============================================ */
+
+:root {
+  --bg-base:    #0f172a;
+  --bg-surface: #1e293b;
+  --bg-deep:    #0a1020;
+  --border:     #334155;
+  --text-primary:   #e2e8f0;
+  --text-secondary: #94a3b8;
+  --text-muted:     #475569;
+  --accent:     #6366f1;
+  --accent-glow: rgba(99,102,241,0.35);
+}
+
+html, body {
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+}
+
+/* Inputs y selects - base oscura para evitar blancos del sistema */
+input, textarea, select {
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+  border-color: var(--border);
+  color-scheme: dark;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-muted);
+}
+
+/* Scrollbar personalizada */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-base);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+}
 
 /* ============================================
    ESTILOS ADICIONALES PARA LEAFLET

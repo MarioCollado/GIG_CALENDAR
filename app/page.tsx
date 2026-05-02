@@ -58,20 +58,15 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ v
         <main className="max-w-2xl mx-auto px-4 py-8 sm:py-12">
 
             <header className="mb-10 sm:mb-12 relative">
-                {/* Fondo de actividad incrustado */}
-                <ActivityHeatmap events={events} />
+                {/* <ActivityHeatmap events={events} /> */}
 
-                <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-8 relative z-10">
-                    <div className="relative">
-                        <h1 className="text-4xl sm:text-5xl font-black tracking-tighter text-slate-900 leading-[0.85] sm:leading-[0.8] drop-shadow-sm">
-                            AGENDA<br />
-                            <span className="text-slate-300 italic">DE BOLOS</span>
-                        </h1>
-                    </div>
-                    <div className="flex sm:flex-col items-center sm:items-end gap-2 sm:gap-0">
-                        <span className="text-3xl sm:text-4xl font-black text-slate-200 leading-none">{events.length}</span>
-                        <span className="text-[9px] font-black text-slate-400 tracking-widest uppercase">
-                            {view === 'mine' ? 'Tus Bolos' : 'Próximos'}
+                <div className="flex items-end justify-between mb-8 relative z-10">
+                    <div className="flex items-baseline gap-3">
+                        <span className="text-5xl sm:text-6xl font-black leading-none" style={{ color: '#818cf8' }}>
+                            {events.length}
+                        </span>
+                        <span className="text-[10px] font-black tracking-[0.2em] uppercase" style={{ color: '#475569' }}>
+                            {view === 'mine' ? 'tus bolos' : 'próximos bolos'}
                         </span>
                     </div>
                 </div>

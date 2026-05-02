@@ -8,13 +8,13 @@ export default function FeedFilter({ isLoggedIn }: { isLoggedIn: boolean }) {
     const router = useRouter()
     const searchParams = useSearchParams()
     const [isPending, startTransition] = useTransition()
-    
+
     const currentFilter = searchParams.get('view') || 'all'
 
     const setFilter = (view: 'all' | 'mine') => {
         const params = new URLSearchParams(searchParams)
         params.set('view', view)
-        
+
         startTransition(() => {
             router.push(`/?${params.toString()}`)
         })
@@ -29,25 +29,23 @@ export default function FeedFilter({ isLoggedIn }: { isLoggedIn: boolean }) {
                     <Loader2 className="animate-spin text-indigo-600" size={16} />
                 </div>
             )}
-            
-            <button 
+
+            <button
                 onClick={() => setFilter('all')}
-                className={`flex items-center gap-2 px-5 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${
-                    currentFilter === 'all' 
-                        ? 'bg-white text-indigo-600 shadow-sm' 
+                className={`flex items-center gap-2 px-5 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${currentFilter === 'all'
+                        ? 'bg-white text-indigo-600 shadow-sm'
                         : 'text-slate-400 hover:text-slate-600'
-                }`}
+                    }`}
             >
                 <Globe size={14} /> Social
             </button>
-            
-            <button 
+
+            <button
                 onClick={() => setFilter('mine')}
-                className={`flex items-center gap-2 px-5 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${
-                    currentFilter === 'mine' 
-                        ? 'bg-white text-indigo-600 shadow-sm' 
+                className={`flex items-center gap-2 px-5 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${currentFilter === 'mine'
+                        ? 'bg-white text-indigo-600 shadow-sm'
                         : 'text-slate-400 hover:text-slate-600'
-                }`}
+                    }`}
             >
                 <User size={14} /> Mis Bolos
             </button>

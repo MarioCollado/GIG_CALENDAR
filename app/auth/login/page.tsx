@@ -2,81 +2,117 @@
 
 import { useState } from 'react'
 import { loginAction } from './actions'
-import { useRouter } from 'next/navigation'
-import { Mail, Lock, Loader2, LogIn } from 'lucide-react'
+import { Loader2, Music2 } from 'lucide-react'
 import Link from 'next/link'
 
 export default function LoginPage() {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
-    const router = useRouter()
 
     async function handleFormAction(formData: FormData) {
+        const password = formData.get('password') as string
+        if (password.length < 6) {
+            setError('La contraseña debe tener al menos 6 caracteres.')
+            return
+        }
         setLoading(true)
         setError(null)
-        
-        console.log('--- INICIANDO LOGIN POR SERVIDOR ---')
-        
-        try {
-            const result = await loginAction(formData)
-            
-            if (result?.error) {
-                console.error('--- ERROR EN LOGIN ---', result.error)
-                setError(result.error)
-                setLoading(false)
-            } else {
-                console.log('--- LOGIN EXITOSO, REDIRIGIENDO... ---')
-                // El redirect lo hace la server action, pero forzamos refresh para asegurar sesión
-                router.refresh()
-            }
-        } catch (err) {
-            // redirect() lanza un error interno en Next.js, es normal si no entra en el bloque error
-            console.log('--- PROCESO FINALIZADO (Posible redirección en curso) ---')
+        const result = await loginAction(formData)
+        if (result?.error) {
+            setError(result.error)
+            setLoading(false)
         }
     }
 
     return (
-        <main className="min-h-[80vh] flex items-center justify-center p-4 bg-slate-50/50">
-            <div className="w-full max-w-md space-y-8 bg-white p-10 rounded-[2.5rem] border border-slate-100 shadow-2xl shadow-indigo-100/50">
-                <div className="text-center">
-                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-3xl bg-indigo-600 text-white mb-6 shadow-xl shadow-indigo-200">
-                        <LogIn size={32} />
+        <main
+            className="min-h-screen flex items-center justify-center px-4 py-12"
+            style={{ background: '#0f172a' }}
+        >
+            {/* Glow de fondo */}
+            <div
+                className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] opacity-20 blur-[100px] pointer-events-none"
+                style={{ background: 'radial-gradient(ellipse, #6366f1 0%, transparent 70%)' }}
+            />
+
+            <div
+                className="relative w-full max-w-md rounded-2xl p-8 sm:p-10"
+                style={{
+                    background: '#1e293b',
+                    border: '1px solid #334155',
+                }}
+            >
+                {/* Logo */}
+                <div className="flex flex-col items-center mb-10">
+                    <div
+                        className="w-12 h-12 rounded-xl flex items-center justify-center mb-4"
+                        style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}
+                    >
+                        <Music2 size={22} className="text-white" />
                     </div>
-                    <h1 className="text-4xl font-black tracking-tight text-slate-900 mb-2 uppercase">Bienvenido</h1>
-                    <p className="text-slate-400 text-xs font-bold uppercase tracking-[0.2em]">Accede a tu agenda de bolos</p>
+                    <h1 className="text-2xl font-bold tracking-tight" style={{ color: '#f1f5f9' }}>
+                        Bienvenido de nuevo
+                    </h1>
+                    <p className="text-sm mt-1" style={{ color: '#94a3b8' }}>
+                        Accede a tu agenda de bolos
+                    </p>
                 </div>
 
-                <form action={handleFormAction} className="space-y-6">
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Email</label>
-                        <div className="relative group">
-                            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-600 transition-colors" size={20} />
-                            <input
-                                name="email"
-                                type="email"
-                                required
-                                className="w-full bg-slate-50 border border-slate-200 p-4 pl-12 rounded-2xl focus:outline-none focus:border-indigo-600 focus:bg-white transition-all font-medium placeholder:text-slate-300"
-                                placeholder="tu@email.com"
-                            />
-                        </div>
+                {/* Form */}
+                <form action={handleFormAction} className="space-y-5">
+                    <div className="space-y-1.5">
+                        <label htmlFor="email" className="text-xs font-semibold uppercase tracking-widest" style={{ color: '#64748b' }}>
+                            Email
+                        </label>
+                        <input
+                            id="email"
+                            name="email"
+                            type="email"
+                            required
+                            autoComplete="email"
+                            disabled={loading}
+                            placeholder="tu@email.com"
+                            className="w-full rounded-lg px-4 py-3 text-sm outline-none transition-all duration-200 disabled:opacity-40"
+                            style={{
+                                background: '#0f172a',
+                                border: '1px solid #334155',
+                                color: '#f1f5f9',
+                            }}
+                            onFocus={e => (e.target.style.borderColor = '#6366f1')}
+                            onBlur={e => (e.target.style.borderColor = '#334155')}
+                        />
                     </div>
 
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Contraseña</label>
-                        <div className="relative group">
-                            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-600 transition-colors" size={20} />
-                            <input
-                                name="password"
-                                type="password"
-                                required
-                                className="w-full bg-slate-50 border border-slate-200 p-4 pl-12 rounded-2xl focus:outline-none focus:border-indigo-600 focus:bg-white transition-all font-medium placeholder:text-slate-300"
-                                placeholder="••••••••"
-                            />
-                        </div>
+                    <div className="space-y-1.5">
+                        <label htmlFor="password" className="text-xs font-semibold uppercase tracking-widest" style={{ color: '#64748b' }}>
+                            Contraseña
+                        </label>
+                        <input
+                            id="password"
+                            name="password"
+                            type="password"
+                            required
+                            minLength={6}
+                            autoComplete="current-password"
+                            disabled={loading}
+                            placeholder="········"
+                            className="w-full rounded-lg px-4 py-3 text-sm outline-none transition-all duration-200 disabled:opacity-40"
+                            style={{
+                                background: '#0f172a',
+                                border: '1px solid #334155',
+                                color: '#f1f5f9',
+                            }}
+                            onFocus={e => (e.target.style.borderColor = '#6366f1')}
+                            onBlur={e => (e.target.style.borderColor = '#334155')}
+                        />
                     </div>
 
                     {error && (
-                        <div className="bg-rose-50 border border-rose-100 p-4 rounded-2xl text-rose-600 text-[10px] font-black uppercase tracking-tight animate-shake">
+                        <div
+                            role="alert"
+                            className="rounded-lg px-4 py-3 text-xs font-medium"
+                            style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#fca5a5' }}
+                        >
                             {error}
                         </div>
                     )}
@@ -84,28 +120,42 @@ export default function LoginPage() {
                     <button
                         type="submit"
                         disabled={loading}
-                        className="w-full flex items-center justify-center gap-3 bg-slate-900 text-white font-black uppercase tracking-[0.15em] py-5 rounded-2xl hover:bg-indigo-600 transition-all shadow-xl shadow-indigo-100 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="group w-full rounded-lg py-3.5 text-sm font-semibold text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-2"
+                        style={{
+                            background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                            boxShadow: '0 0 20px rgba(99,102,241,0.3)',
+                        }}
+                        onMouseEnter={e => ((e.currentTarget as HTMLButtonElement).style.boxShadow = '0 0 40px rgba(99,102,241,0.6)')}
+                        onMouseLeave={e => ((e.currentTarget as HTMLButtonElement).style.boxShadow = '0 0 20px rgba(99,102,241,0.3)')}
                     >
                         {loading ? (
                             <>
-                                <Loader2 className="animate-spin" size={20} />
+                                <Loader2 size={16} className="animate-spin" />
                                 Verificando...
                             </>
                         ) : (
-                            <>
-                                Iniciar Sesión
-                            </>
+                            'Iniciar sesión'
                         )}
                     </button>
                 </form>
 
-                <div className="text-center pt-4">
-                    <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">
-                        ¿Nuevo por aquí?{' '}
-                        <Link href="/auth/signup" className="text-indigo-600 hover:text-indigo-700 transition-colors border-b-2 border-indigo-100 hover:border-indigo-600 pb-0.5 ml-1">
-                            Crea una cuenta
-                        </Link>
-                    </p>
+                {/* Divider */}
+                <div className="flex items-center gap-4 my-8">
+                    <div className="flex-1 h-px" style={{ background: '#334155' }} />
+                    <span className="text-xs" style={{ color: '#475569' }}>¿No tienes cuenta?</span>
+                    <div className="flex-1 h-px" style={{ background: '#334155' }} />
+                </div>
+
+                <div className="text-center">
+                    <Link
+                        href="/auth/signup"
+                        className="text-sm font-medium transition-colors duration-200"
+                        style={{ color: '#818cf8' }}
+                        onMouseEnter={e => ((e.currentTarget as HTMLAnchorElement).style.color = '#a5b4fc')}
+                        onMouseLeave={e => ((e.currentTarget as HTMLAnchorElement).style.color = '#818cf8')}
+                    >
+                        Crear una cuenta nueva →
+                    </Link>
                 </div>
             </div>
         </main>

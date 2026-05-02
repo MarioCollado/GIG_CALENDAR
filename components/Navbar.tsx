@@ -13,45 +13,40 @@ export default function Navbar() {
     const [user, setUser] = useState<any>(null)
     const [loading, setLoading] = useState(true)
 
-    // 1. Efecto para cambios de RUTA (Captura la redirección post-login)
+    // Sincronización inicial + listener de cambios reales
     useEffect(() => {
-        const handleRouteChange = async () => {
-            // Si venimos de login o estamos entrando a admin, forzamos verificación visual
-            setLoading(true)
+        const initAuth = async () => {
             const { data: { session } } = await supabase.auth.getSession()
             setUser(session?.user ?? null)
-            
-            // Delay para que la transición sea suave y profesional
-            setTimeout(() => setLoading(false), 600)
+            setLoading(false)
         }
+        initAuth()
 
-        handleRouteChange()
-    }, [pathname, supabase])
-
-    // 2. Efecto para cambios de AUTH en tiempo real (Captura el logout y eventos manuales)
-    useEffect(() => {
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-            console.log('[AUTH EVENT]', event)
-            
-            if (event === 'SIGNED_OUT') {
-                setLoading(true)
-                setUser(null)
-                setTimeout(() => {
-                    setLoading(false)
-                    router.push('/auth/login')
-                    router.refresh()
-                }, 600)
-            }
-
-            if (event === 'SIGNED_IN') {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+            if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
                 setUser(session?.user ?? null)
                 setLoading(false)
-                router.refresh()
+            }
+            if (event === 'SIGNED_OUT') {
+                setUser(null)
+                setLoading(false)
+                router.push('/auth/login')
             }
         })
 
         return () => subscription.unsubscribe()
     }, [supabase, router])
+
+    // Verificación silenciosa al cambiar de ruta (sin spinner)
+    useEffect(() => {
+        const checkSessionSilently = async () => {
+            const { data: { session } } = await supabase.auth.getSession()
+            if (session?.user?.id !== user?.id) {
+                setUser(session?.user ?? null)
+            }
+        }
+        checkSessionSilently()
+    }, [pathname, user?.id, supabase])
 
     const handleLogout = async () => {
         setLoading(true)
@@ -66,66 +61,86 @@ export default function Navbar() {
 
     return (
         <>
-            <nav className="sticky top-0 z-[100] bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm">
+            {/* Top Navbar - Dark */}
+            <nav
+                className="sticky top-0 z-[100] backdrop-blur-md border-b"
+                style={{
+                    background: 'rgba(15,23,42,0.85)',
+                    borderColor: '#1e293b',
+                }}
+            >
                 <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
-                    
+
                     {/* Logo */}
                     <div className="flex-none">
-                        <Link href="/" className="font-black text-xl tracking-tighter text-slate-900">
-                            MIS<span className="text-indigo-600">BOLOS.</span>
+                        <Link href="/" className="font-bold text-base tracking-tight" style={{ color: '#f1f5f9' }}>
+                            MIS<span style={{ color: '#818cf8' }}>BOLOS.</span>
                         </Link>
                     </div>
-                    
+
                     {/* Menú PC */}
                     <div className="hidden md:flex flex-1 justify-center items-center px-4">
-                        <div className="flex gap-1 items-center bg-slate-100 p-1 rounded-xl shadow-inner border border-slate-200/50">
+                        <div
+                            className="flex gap-1 items-center p-1 rounded-xl"
+                            style={{ background: '#1e293b', border: '1px solid #334155' }}
+                        >
                             {navLinks.map((link) => {
                                 const isActive = pathname === link.href
                                 return (
-                                    <Link 
+                                    <Link
                                         key={link.href}
-                                        href={link.href} 
-                                        className={`flex items-center justify-center rounded-lg transition-all duration-300 ${
-                                            isActive 
-                                                ? 'bg-indigo-600 text-white shadow-md' 
-                                                : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
-                                        } px-5 py-2`}
+                                        href={link.href}
+                                        className="flex items-center justify-center rounded-lg transition-all duration-200 px-5 py-2 text-[11px] font-semibold uppercase tracking-widest whitespace-nowrap"
+                                        style={{
+                                            background: isActive ? '#6366f1' : 'transparent',
+                                            color: isActive ? '#fff' : '#94a3b8',
+                                            boxShadow: isActive ? '0 0 16px rgba(99,102,241,0.4)' : 'none',
+                                        }}
                                     >
-                                        <span className="text-[11px] font-black uppercase tracking-widest whitespace-nowrap">
-                                            {link.name}
-                                        </span>
+                                        {link.name}
                                     </Link>
                                 )
                             })}
                         </div>
                     </div>
 
-                    {/* Botón Usuario / Spinner Dinámico */}
-                    <div className="flex-none flex items-center gap-2 min-w-[80px] justify-end">
+                    {/* Botón Usuario */}
+                    <div className="flex-none flex items-center gap-2 min-w-[60px] justify-end">
                         {loading ? (
-                            <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 rounded-xl border border-slate-100 animate-in fade-in zoom-in-95 duration-300">
-                                <Loader2 className="w-4 h-4 text-indigo-600 animate-spin" />
-                                <span className="text-[9px] font-black uppercase text-slate-400 tracking-tighter">Sincronizando</span>
+                            <div
+                                className="flex items-center gap-2 px-3 py-2 rounded-xl"
+                                style={{ background: '#1e293b', border: '1px solid #334155' }}
+                            >
+                                <Loader2 className="w-4 h-4 animate-spin" style={{ color: '#818cf8' }} />
                             </div>
                         ) : user ? (
-                            <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-2 duration-500">
+                            <div className="flex items-center gap-3">
                                 <div className="hidden lg:flex flex-col items-end">
-                                    <span className="text-[10px] font-black text-slate-900 uppercase truncate max-w-[120px]">
+                                    <span className="text-[10px] font-bold uppercase truncate max-w-[120px]" style={{ color: '#f1f5f9' }}>
                                         {user.user_metadata?.username || user.email?.split('@')[0]}
                                     </span>
-                                    <span className="text-[8px] font-bold text-indigo-500 uppercase">Perfil Activo</span>
+                                    <span className="text-[8px] font-semibold uppercase" style={{ color: '#818cf8' }}>En línea</span>
                                 </div>
-                                <button 
+                                <button
                                     onClick={handleLogout}
-                                    className="p-2.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all"
+                                    className="p-2.5 rounded-xl transition-all duration-200"
+                                    style={{ color: '#64748b' }}
+                                    onMouseEnter={e => ((e.currentTarget as HTMLButtonElement).style.color = '#f87171')}
+                                    onMouseLeave={e => ((e.currentTarget as HTMLButtonElement).style.color = '#64748b')}
                                 >
                                     <LogOut size={18} />
                                 </button>
                             </div>
                         ) : (
-                            <Link 
+                            <Link
                                 href="/auth/login"
-                                className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest px-5 py-2.5 bg-slate-900 text-white rounded-xl hover:bg-indigo-600 transition-all shadow-lg animate-in fade-in duration-500"
+                                className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-widest px-4 py-2.5 rounded-lg text-white transition-all duration-200"
+                                style={{
+                                    background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                                    boxShadow: '0 0 16px rgba(99,102,241,0.3)',
+                                }}
+                                onMouseEnter={e => ((e.currentTarget as HTMLAnchorElement).style.boxShadow = '0 0 24px rgba(99,102,241,0.6)')}
+                                onMouseLeave={e => ((e.currentTarget as HTMLAnchorElement).style.boxShadow = '0 0 16px rgba(99,102,241,0.3)')}
                             >
                                 <LogIn size={14} />
                                 <span className="hidden sm:inline">Entrar</span>
@@ -135,22 +150,28 @@ export default function Navbar() {
                 </div>
             </nav>
 
-            {/* Nav Móvil */}
-            <nav className="fixed bottom-0 left-0 right-0 z-[100] md:hidden bg-white border-t border-slate-200 shadow-[0_-4px_20px_rgba(0,0,0,0.1)] pb-safe">
+            {/* Bottom Nav Móvil - Dark */}
+            <nav
+                className="fixed bottom-0 left-0 right-0 z-[100] md:hidden border-t pb-safe"
+                style={{
+                    background: 'rgba(15,23,42,0.95)',
+                    borderColor: '#1e293b',
+                    backdropFilter: 'blur(12px)',
+                }}
+            >
                 <div className="grid grid-cols-3 h-16">
                     {navLinks.map((link) => {
                         const isActive = pathname === link.href
                         const Icon = link.icon
                         return (
-                            <Link 
+                            <Link
                                 key={link.href}
                                 href={link.href}
-                                className={`flex flex-col items-center justify-center gap-1 transition-all ${
-                                    isActive ? 'text-indigo-600' : 'text-slate-400'
-                                }`}
+                                className="flex flex-col items-center justify-center gap-1 transition-all duration-200"
+                                style={{ color: isActive ? '#818cf8' : '#475569' }}
                             >
-                                <Icon size={20} className={isActive ? 'scale-110' : ''} />
-                                <span className="text-[9px] font-black uppercase tracking-widest">{link.name}</span>
+                                <Icon size={20} style={{ transform: isActive ? 'scale(1.1)' : 'scale(1)' }} />
+                                <span className="text-[9px] font-bold uppercase tracking-widest">{link.name}</span>
                             </Link>
                         )
                     })}

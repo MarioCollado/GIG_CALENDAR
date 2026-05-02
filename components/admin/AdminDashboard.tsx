@@ -3,18 +3,26 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Band, Event } from '@/types'
-import { Pencil, Trash2, Plus, Calendar, Music, MapPin, X, Save, Loader2, Search, Tag } from 'lucide-react'
+import { Pencil, Trash2, Plus, Calendar, Music, X, Save, Loader2, Search, Tag } from 'lucide-react'
 import { saveRecord, deleteRecord } from '@/app/admin/actions'
 
-// ---------- TYPES ----------
-type EventWithBand = Event & { band_name: string }
+const D = {
+    bg:      '#0f172a',
+    surface: '#1e293b',
+    border:  '#334155',
+    text:    '#e2e8f0',
+    muted:   '#94a3b8',
+    dim:     '#475569',
+    accent:  '#6366f1',
+    danger:  '#f87171',
+}
 
+type EventWithBand = Event & { band_name: string }
 interface AdminDashboardProps {
     initialBands: Band[]
     initialEvents: EventWithBand[]
 }
 
-// ---------- MAIN COMPONENT ----------
 export default function AdminDashboard({ initialBands, initialEvents }: AdminDashboardProps) {
     const router = useRouter()
     const [activeTab, setActiveTab] = useState<'events' | 'bands'>('events')
@@ -27,110 +35,116 @@ export default function AdminDashboard({ initialBands, initialEvents }: AdminDas
         text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\w ]+/g, '').replace(/ +/g, '-')
 
     const handleDelete = (table: 'bands' | 'events', id: string) => {
-        const cleanId = id.trim()
-        if (!confirm(`¿Estás seguro de eliminar este registro?`)) return
-
+        if (!confirm('¿Eliminar este registro?')) return
         startTransition(async () => {
-            const result = await deleteRecord(table, cleanId)
-            if (result.success) {
-                router.refresh()
-            } else {
-                alert(`Error: ${result.error}`)
-            }
+            const r = await deleteRecord(table, id.trim())
+            if (r.success) router.refresh()
+            else alert(`Error: ${r.error}`)
         })
     }
 
     const openForm = (type: 'band' | 'event', item: Band | Event | null = null) => {
-        setFormType(type)
-        setEditingItem(item)
-        setIsPanelOpen(true)
+        setFormType(type); setEditingItem(item); setIsPanelOpen(true)
     }
 
     const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault()
         const formData = new FormData(e.currentTarget)
         const rawData = Object.fromEntries(formData.entries()) as Record<string, any>
-
         const table = formType === 'band' ? 'bands' : 'events'
         const cleanData: any = { ...rawData }
         if (formType === 'band') cleanData.slug = generateSlug(cleanData.name)
-
         delete cleanData.id
-
         startTransition(async () => {
             try {
-                const result = await saveRecord(table, cleanData, editingItem?.id)
-                if (result.success) {
-                    setIsPanelOpen(false)
-                    router.refresh()
-                }
-            } catch (error: any) {
-                alert('Error al guardar: ' + error.message)
-            }
+                const r = await saveRecord(table, cleanData, editingItem?.id)
+                if (r.success) { setIsPanelOpen(false); router.refresh() }
+            } catch (err: any) { alert('Error: ' + err.message) }
         })
     }
 
+    const tabs = [
+        { id: 'events' as const, label: 'Eventos', icon: <Calendar size={14} /> },
+        { id: 'bands'  as const, label: 'Bandas',  icon: <Music size={14} /> },
+    ]
+
     return (
         <div className="relative">
+            {/* Overlay de carga */}
             {isPending && (
-                <div className="fixed inset-0 z-[2000] bg-white/20 backdrop-blur-[2px] flex items-center justify-center">
-                    <Loader2 className="animate-spin text-indigo-600" size={40} />
+                <div className="fixed inset-0 z-[2000] flex items-center justify-center"
+                    style={{ background: 'rgba(15,23,42,0.7)', backdropFilter: 'blur(4px)' }}>
+                    <Loader2 className="animate-spin" size={40} style={{ color: D.accent }} />
                 </div>
             )}
 
             <div className="space-y-6">
-                <div className="flex p-1 bg-slate-200/50 rounded-xl w-fit border border-slate-200">
-                    <button onClick={() => setActiveTab('events')} className={`flex items-center gap-2 px-6 py-2.5 text-xs font-bold uppercase tracking-widest rounded-lg transition-all ${activeTab === 'events' ? 'bg-white shadow-md text-indigo-600' : 'text-slate-500'}`}>
-                        <Calendar size={14} /> Eventos
-                    </button>
-                    <button onClick={() => setActiveTab('bands')} className={`flex items-center gap-2 px-6 py-2.5 text-xs font-bold uppercase tracking-widest rounded-lg transition-all ${activeTab === 'bands' ? 'bg-white shadow-md text-indigo-600' : 'text-slate-500'}`}>
-                        <Music size={14} /> Bandas
-                    </button>
+                {/* Tabs */}
+                <div className="flex p-1 rounded-xl w-fit" style={{ background: D.surface, border: `1px solid ${D.border}` }}>
+                    {tabs.map(tab => (
+                        <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+                            className="flex items-center gap-2 px-6 py-2.5 text-xs font-bold uppercase tracking-widest rounded-lg transition-all duration-200"
+                            style={{
+                                background: activeTab === tab.id ? D.accent : 'transparent',
+                                color: activeTab === tab.id ? '#fff' : D.dim,
+                                boxShadow: activeTab === tab.id ? `0 0 16px rgba(99,102,241,0.35)` : 'none',
+                            }}>
+                            {tab.icon} {tab.label}
+                        </button>
+                    ))}
                 </div>
 
-                {activeTab === 'events' ? (
-                    <EventsTable
-                        events={initialEvents}
-                        onEdit={(e: any) => openForm('event', e)}
-                        onDelete={(id: string) => handleDelete('events', id)}
-                        onAdd={() => openForm('event')}
-                    />
-                ) : (
-                    <BandsTable
-                        bands={initialBands}
-                        onEdit={(b: any) => openForm('band', b)}
-                        onDelete={(id: string) => handleDelete('bands', id)}
-                        onAdd={() => openForm('band')}
-                    />
-                )}
+                {activeTab === 'events'
+                    ? <DataTable title="Agenda de Bolos" count={initialEvents.length} addLabel="Nuevo Bolo" onAdd={() => openForm('event')}
+                        rows={initialEvents.map(ev => ({
+                            id: ev.id,
+                            primary: ev.band_name,
+                            secondary: ev.venue_name,
+                            extra: ev.title ? `"${ev.title}"` : undefined,
+                            meta: new Date(ev.date).toLocaleDateString('es-ES'),
+                            metaSub: ev.city,
+                            onEdit: () => openForm('event', ev),
+                            onDelete: () => handleDelete('events', ev.id),
+                        }))} />
+                    : <DataTable title="Mis Proyectos" count={initialBands.length} addLabel="Añadir Banda" onAdd={() => openForm('band')}
+                        rows={initialBands.map(b => ({
+                            id: b.id,
+                            primary: b.name,
+                            secondary: b.genre || 'Sin Género',
+                            onEdit: () => openForm('band', b),
+                            onDelete: () => handleDelete('bands', b.id),
+                        }))} />
+                }
             </div>
 
-            {/* PANEL LATERAL */}
+            {/* Panel lateral */}
             {isPanelOpen && (
                 <div className="fixed inset-0 z-[1000] overflow-hidden">
-                    <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setIsPanelOpen(false)} />
-                    <div className="absolute inset-y-0 right-0 w-full max-w-md bg-white shadow-2xl flex flex-col border-l border-slate-100 animate-in slide-in-from-right duration-300">
-                        <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-                            <h2 className="text-xl font-black uppercase tracking-tight text-slate-900">
+                    <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)' }}
+                        onClick={() => setIsPanelOpen(false)} />
+                    <div className="absolute inset-y-0 right-0 w-full max-w-md flex flex-col animate-in slide-in-from-right duration-300"
+                        style={{ background: D.surface, borderLeft: `1px solid ${D.border}` }}>
+                        <div className="p-6 flex items-center justify-between" style={{ borderBottom: `1px solid ${D.border}` }}>
+                            <h2 className="text-xl font-black uppercase tracking-tight" style={{ color: D.text }}>
                                 {editingItem ? 'Editar' : 'Añadir'} {formType === 'band' ? 'Banda' : 'Evento'}
                             </h2>
-                            <button onClick={() => setIsPanelOpen(false)} className="p-2 hover:bg-white rounded-full transition-colors shadow-sm">
+                            <button onClick={() => setIsPanelOpen(false)}
+                                className="p-2 rounded-lg transition-colors"
+                                style={{ color: D.dim }}
+                                onMouseEnter={e => ((e.currentTarget as HTMLButtonElement).style.color = D.text)}
+                                onMouseLeave={e => ((e.currentTarget as HTMLButtonElement).style.color = D.dim)}>
                                 <X size={20} />
                             </button>
                         </div>
-
                         <form onSubmit={handleSave} className="flex-1 overflow-y-auto p-8 space-y-8">
-                            {formType === 'band' ? (
-                                <BandFormFields item={editingItem as Band | null} />
-                            ) : (
-                                <EventFormFields item={editingItem as Event | null} bands={initialBands} />
-                            )}
-
-                            <div className="pt-8">
-                                <button type="submit" disabled={isPending} className="w-full flex items-center justify-center gap-2 bg-indigo-600 text-white font-black uppercase tracking-widest py-4 rounded-2xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 disabled:opacity-50">
-                                    <Save size={18} /> Guardar Cambios
-                                </button>
-                            </div>
+                            {formType === 'band'
+                                ? <BandFormFields item={editingItem as Band | null} />
+                                : <EventFormFields item={editingItem as Event | null} bands={initialBands} />}
+                            <button type="submit" disabled={isPending}
+                                className="w-full flex items-center justify-center gap-2 text-white font-black uppercase tracking-widest py-4 rounded-xl transition-all disabled:opacity-50"
+                                style={{ background: `linear-gradient(135deg, ${D.accent}, #8b5cf6)`, boxShadow: `0 0 20px rgba(99,102,241,0.3)` }}>
+                                <Save size={18} /> Guardar Cambios
+                            </button>
                         </form>
                     </div>
                 </div>
@@ -139,159 +153,109 @@ export default function AdminDashboard({ initialBands, initialEvents }: AdminDas
     )
 }
 
-// --- TABLAS ---
-
-function EventsTable({ events, onEdit, onDelete, onAdd }: any) {
+// --- TABLA GENÉRICA ---
+function DataTable({ title, count, addLabel, onAdd, rows }: {
+    title: string; count: number; addLabel: string; onAdd: () => void
+    rows: { id: string; primary: string; secondary: string; extra?: string; meta?: string; metaSub?: string; onEdit: () => void; onDelete: () => void }[]
+}) {
     return (
-        <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-            <div className="p-4 sm:p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                <div className="flex flex-col text-left">
-                    <h2 className="font-bold text-slate-800 uppercase text-xs tracking-widest">Agenda de Bolos</h2>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase">{events.length} registros</p>
+        <div className="rounded-2xl overflow-hidden" style={{ background: D.surface, border: `1px solid ${D.border}` }}>
+            <div className="p-4 sm:p-6 flex justify-between items-center" style={{ borderBottom: `1px solid ${D.border}` }}>
+                <div>
+                    <h2 className="font-bold uppercase text-xs tracking-widest" style={{ color: D.muted }}>{title}</h2>
+                    <p className="text-[10px] font-bold uppercase mt-0.5" style={{ color: D.dim }}>{count} registros</p>
                 </div>
-                <button onClick={onAdd} className="flex items-center gap-2 bg-indigo-600 text-white text-[10px] font-black px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl hover:bg-indigo-700 uppercase tracking-widest shadow-lg shadow-indigo-200 transition-all">
-                    <Plus size={14} /> <span className="hidden sm:inline">Nuevo Bolo</span><span className="sm:hidden">Nuevo</span>
+                <button onClick={onAdd}
+                    className="flex items-center gap-2 text-white text-[10px] font-black px-4 py-2.5 rounded-lg uppercase tracking-widest transition-all"
+                    style={{ background: `linear-gradient(135deg, ${D.accent}, #8b5cf6)`, boxShadow: `0 0 12px rgba(99,102,241,0.25)` }}>
+                    <Plus size={14} /> {addLabel}
                 </button>
             </div>
 
-            {/* Vista Móvil (Cards) */}
-            <div className="block sm:hidden divide-y divide-slate-100">
-                {events.map((event: any) => (
-                    <div key={event.id} className="p-4 space-y-3">
-                        <div className="flex justify-between items-start">
-                            <div className="flex flex-col">
-                                <div className="flex items-center gap-2">
-                                    <span className="font-bold text-slate-900">{event.band_name}</span>
-                                    <span className="text-[8px] font-mono text-slate-300 bg-slate-50 px-1 rounded">#{event.id?.slice(-4)}</span>
-                                </div>
-                                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{event.venue_name}</span>
-                            </div>
-                            <div className="flex gap-1">
-                                <button onClick={() => onEdit(event)} className="p-2 text-slate-400 hover:text-indigo-600"><Pencil size={15} /></button>
-                                <button onClick={() => onDelete(event.id)} className="p-2 text-slate-400 hover:text-rose-600"><Trash2 size={15} /></button>
-                            </div>
-                        </div>
-                        <div className="flex justify-between items-center text-[11px]">
-                            <span className="text-slate-600 font-medium">{new Date(event.date).toLocaleDateString('es-ES')}</span>
-                            <span className="text-slate-400 font-bold uppercase">{event.city}</span>
-                        </div>
-                    </div>
-                ))}
-            </div>
-
-            {/* Vista Escritorio (Table) */}
-            <div className="hidden sm:block overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                    <tbody className="divide-y divide-slate-50">
-                        {events.map((event: any) => (
-                            <tr key={event.id} className="hover:bg-indigo-50/30 group transition-colors">
-                                <td className="px-6 py-5">
-                                    <div className="flex items-center gap-2">
-                                        <span className="font-bold text-slate-900">{event.band_name}</span>
-                                        <span className="text-[8px] font-mono text-slate-300 bg-slate-50 px-1 rounded uppercase">#{event.id?.slice(-4)}</span>
+            {rows.length === 0 ? (
+                <div className="py-12 text-center text-sm font-bold uppercase tracking-widest" style={{ color: D.dim }}>
+                    Sin registros
+                </div>
+            ) : (
+                <table className="w-full text-left">
+                    <tbody>
+                        {rows.map(row => (
+                            <tr key={row.id} style={{ borderBottom: `1px solid ${D.border}` }}
+                                onMouseEnter={e => ((e.currentTarget as HTMLTableRowElement).style.background = 'rgba(99,102,241,0.06)')}
+                                onMouseLeave={e => ((e.currentTarget as HTMLTableRowElement).style.background = 'transparent')}>
+                                <td className="px-5 py-4">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                        <span className="font-bold" style={{ color: D.text }}>{row.primary}</span>
+                                        <span className="text-[8px] font-mono px-1.5 py-0.5 rounded" style={{ color: D.dim, background: D.bg }}>
+                                            #{row.id?.slice(-4)}
+                                        </span>
                                     </div>
-                                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{event.venue_name}</span>
-                                    {event.title && <span className="block text-[9px] text-indigo-500 font-bold uppercase mt-1 italic">"{event.title}"</span>}
+                                    <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: D.dim }}>{row.secondary}</span>
+                                    {row.extra && <span className="block text-[9px] font-bold uppercase mt-0.5 italic" style={{ color: D.accent }}>{row.extra}</span>}
                                 </td>
-                                <td className="px-6 py-5">
-                                    <div className="text-sm text-slate-600 font-medium">{new Date(event.date).toLocaleDateString('es-ES')}</div>
-                                    <div className="text-[10px] text-slate-400 font-bold uppercase">{event.city}</div>
-                                </td>
-                                <td className="px-6 py-5 text-right whitespace-nowrap">
+                                {row.meta && (
+                                    <td className="px-5 py-4 hidden sm:table-cell">
+                                        <div className="text-sm font-medium" style={{ color: D.muted }}>{row.meta}</div>
+                                        {row.metaSub && <div className="text-[10px] font-bold uppercase" style={{ color: D.dim }}>{row.metaSub}</div>}
+                                    </td>
+                                )}
+                                <td className="px-5 py-4 text-right">
                                     <div className="flex justify-end gap-1">
-                                        <button onClick={() => onEdit(event)} className="p-2.5 text-slate-400 hover:text-indigo-600 hover:bg-white hover:shadow-sm rounded-lg transition-all"><Pencil size={15} /></button>
-                                        <button onClick={() => onDelete(event.id)} className="p-2.5 text-slate-400 hover:text-rose-600 hover:bg-white hover:shadow-sm rounded-lg transition-all"><Trash2 size={15} /></button>
+                                        <IconBtn onClick={row.onEdit} hoverColor={D.accent}><Pencil size={15} /></IconBtn>
+                                        <IconBtn onClick={row.onDelete} hoverColor={D.danger}><Trash2 size={15} /></IconBtn>
                                     </div>
                                 </td>
                             </tr>
                         ))}
                     </tbody>
                 </table>
-            </div>
+            )}
         </div>
     )
 }
 
-function BandsTable({ bands, onEdit, onDelete, onAdd }: any) {
+function IconBtn({ onClick, children, hoverColor }: { onClick: () => void; children: React.ReactNode; hoverColor: string }) {
     return (
-        <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-            <div className="p-4 sm:p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                <div className="flex flex-col text-left">
-                    <h2 className="font-bold text-slate-800 uppercase text-xs tracking-widest">Mis Proyectos</h2>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase">{bands.length} bandas</p>
-                </div>
-                <button onClick={onAdd} className="flex items-center gap-2 bg-indigo-600 text-white text-[10px] font-black px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl hover:bg-indigo-700 uppercase tracking-widest shadow-lg shadow-indigo-200 transition-all">
-                    <Plus size={14} /> <span className="hidden sm:inline">Añadir Banda</span><span className="sm:hidden">Añadir</span>
-                </button>
-            </div>
-
-            {/* Vista Móvil (Cards) */}
-            <div className="block sm:hidden divide-y divide-slate-100">
-                {bands.map((band: any) => (
-                    <div key={band.id} className="p-4 flex justify-between items-center">
-                        <div className="flex flex-col">
-                            <div className="flex items-center gap-2">
-                                <span className="font-bold text-slate-900">{band.name}</span>
-                                <span className="text-[8px] font-mono text-slate-300 bg-slate-50 px-1 rounded">#{band.id?.slice(-4)}</span>
-                            </div>
-                            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{band.genre || 'Sin Género'}</span>
-                        </div>
-                        <div className="flex gap-1">
-                            <button onClick={() => onEdit(band)} className="p-2 text-slate-400 hover:text-indigo-600"><Pencil size={15} /></button>
-                            <button onClick={() => onDelete(band.id)} className="p-2 text-slate-400 hover:text-rose-600"><Trash2 size={15} /></button>
-                        </div>
-                    </div>
-                ))}
-            </div>
-
-            {/* Vista Escritorio (Table) */}
-            <div className="hidden sm:block">
-                <table className="w-full text-left border-collapse">
-                    <tbody className="divide-y divide-slate-50">
-                        {bands.map((band: any) => (
-                            <tr key={band.id} className="hover:bg-indigo-50/30 group transition-colors">
-                                <td className="px-6 py-5">
-                                    <div className="flex items-center gap-2">
-                                        <span className="font-bold text-slate-900 block">{band.name}</span>
-                                        <span className="text-[8px] font-mono text-slate-300 bg-slate-50 px-1 rounded uppercase">#{band.id?.slice(-4)}</span>
-                                    </div>
-                                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{band.genre || 'Sin Género'}</span>
-                                </td>
-                                <td className="px-6 py-5 text-right whitespace-nowrap">
-                                    <div className="flex justify-end gap-1">
-                                        <button onClick={() => onEdit(band)} className="p-2.5 text-slate-400 hover:text-indigo-600 hover:bg-white hover:shadow-sm rounded-lg transition-all"><Pencil size={15} /></button>
-                                        <button onClick={() => onDelete(band.id)} className="p-2.5 text-slate-400 hover:text-rose-600 hover:bg-white hover:shadow-sm rounded-lg transition-all"><Trash2 size={15} /></button>
-                                    </div>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-        </div>
+        <button onClick={onClick} className="p-2.5 rounded-lg transition-all duration-200"
+            style={{ color: D.dim }}
+            onMouseEnter={e => ((e.currentTarget as HTMLButtonElement).style.color = hoverColor)}
+            onMouseLeave={e => ((e.currentTarget as HTMLButtonElement).style.color = D.dim)}>
+            {children}
+        </button>
     )
 }
 
-// --- FORMULARIOS ---
+// --- INPUTS REUTILIZABLES ---
+function DarkInput({ name, defaultValue, required, placeholder, type = 'text', style: extra = {} }: any) {
+    return (
+        <input name={name} type={type} defaultValue={defaultValue} required={required} placeholder={placeholder}
+            className="w-full rounded-xl px-4 py-3 text-sm font-medium outline-none transition-all duration-200"
+            style={{ background: D.bg, border: `1px solid ${D.border}`, color: D.text, ...extra }}
+            onFocus={e => (e.target.style.borderColor = D.accent)}
+            onBlur={e => (e.target.style.borderColor = D.border)} />
+    )
+}
 
+function FieldLabel({ children }: { children: React.ReactNode }) {
+    return <label className="text-[10px] font-black uppercase tracking-widest ml-1" style={{ color: D.dim }}>{children}</label>
+}
+
+// --- FORMULARIO BANDA ---
 function BandFormFields({ item }: { item: Band | null }) {
     return (
         <div className="space-y-6">
-            <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Nombre de la Banda</label>
-                <input name="name" defaultValue={item?.name} required className="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl focus:outline-none focus:border-indigo-600 transition-all font-medium text-slate-700" />
-            </div>
-            <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Género Musical</label>
-                <input name="genre" defaultValue={item?.genre ?? ''} className="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl focus:outline-none focus:border-indigo-600 transition-all font-medium text-slate-700" />
-            </div>
+            <div className="space-y-2"><FieldLabel>Nombre de la Banda</FieldLabel>
+                <DarkInput name="name" defaultValue={item?.name} required /></div>
+            <div className="space-y-2"><FieldLabel>Género Musical</FieldLabel>
+                <DarkInput name="genre" defaultValue={item?.genre ?? ''} /></div>
         </div>
     )
 }
 
-function EventFormFields({ item, bands }: { item: Event | null, bands: Band[] }) {
-    const [lat, setLat] = useState<string>(item?.lat?.toString() || '')
-    const [lng, setLng] = useState<string>(item?.lng?.toString() || '')
+// --- FORMULARIO EVENTO ---
+function EventFormFields({ item, bands }: { item: Event | null; bands: Band[] }) {
+    const [lat, setLat] = useState(item?.lat?.toString() || '')
+    const [lng, setLng] = useState(item?.lng?.toString() || '')
     const [searching, setSearching] = useState(false)
 
     const findCoordinates = async () => {
@@ -302,51 +266,58 @@ function EventFormFields({ item, bands }: { item: Event | null, bands: Band[] })
         try {
             const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(venue + ', ' + city + ', Spain')}`)
             const data = await res.json()
-            if (data?.[0]) {
-                setLat(data[0].lat)
-                setLng(data[0].lon)
-            }
-        } catch (e) { }
+            if (data?.[0]) { setLat(data[0].lat); setLng(data[0].lon) }
+        } catch { }
         setSearching(false)
     }
 
     return (
         <div className="space-y-6">
             <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1 flex items-center gap-1.5">
-                    <Tag size={12} className="text-indigo-600" /> Título de la Gira / Nombre Bolo
+                <label className="text-[10px] font-black uppercase tracking-widest ml-1 flex items-center gap-1.5" style={{ color: D.dim }}>
+                    <Tag size={11} style={{ color: D.accent }} /> Título de Gira / Bolo
                 </label>
-                <input name="title" defaultValue={item?.title || ''} className="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl focus:outline-none focus:border-indigo-600 transition-all font-bold text-indigo-600" placeholder="Ej: Gira '24: El Retorno" />
+                <DarkInput name="title" defaultValue={item?.title || ''} placeholder="Ej: Gira '25"
+                    style={{ color: '#818cf8', fontWeight: 700 }} />
             </div>
+
             <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Banda</label>
-                <select name="band_id" defaultValue={(item as any)?.band_id || ''} required className="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl focus:outline-none focus:border-indigo-600 transition-all font-bold text-slate-700 appearance-none">
-                    <option value="">Selecciona una banda...</option>
-                    {bands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                <FieldLabel>Banda</FieldLabel>
+                <select name="band_id" defaultValue={(item as any)?.band_id || ''} required
+                    className="w-full rounded-xl px-4 py-3 text-sm font-medium outline-none transition-all duration-200 appearance-none"
+                    style={{ background: D.bg, border: `1px solid ${D.border}`, color: D.text }}
+                    onFocus={e => (e.target.style.borderColor = D.accent)}
+                    onBlur={e => (e.target.style.borderColor = D.border)}>
+                    <option value="" style={{ background: D.surface }}>Selecciona una banda...</option>
+                    {bands.map(b => <option key={b.id} value={b.id} style={{ background: D.surface }}>{b.name}</option>)}
                 </select>
             </div>
+
             <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Fecha</label>
-                <input name="date" type="datetime-local" defaultValue={item?.date ? new Date(item.date).toISOString().slice(0, 16) : ''} required className="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl focus:outline-none focus:border-indigo-600 transition-all font-medium text-slate-700" />
+                <FieldLabel>Fecha</FieldLabel>
+                <DarkInput name="date" type="datetime-local"
+                    defaultValue={item?.date ? new Date(item.date).toISOString().slice(0, 16) : ''} required />
             </div>
+
             <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Recinto</label>
-                    <input name="venue_name" defaultValue={item?.venue_name} required className="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl focus:outline-none focus:border-indigo-600 transition-all font-medium text-slate-700" />
-                </div>
-                <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Ciudad</label>
-                    <input name="city" defaultValue={item?.city} required className="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl focus:outline-none focus:border-indigo-600 transition-all font-medium text-slate-700" />
-                </div>
+                <div className="space-y-2"><FieldLabel>Recinto</FieldLabel>
+                    <DarkInput name="venue_name" defaultValue={item?.venue_name} required /></div>
+                <div className="space-y-2"><FieldLabel>Ciudad</FieldLabel>
+                    <DarkInput name="city" defaultValue={item?.city} required /></div>
             </div>
-            <button type="button" onClick={findCoordinates} disabled={searching} className="w-full flex items-center justify-center gap-2 bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest py-4 rounded-2xl hover:bg-indigo-600 transition-all">
+
+            <button type="button" onClick={findCoordinates} disabled={searching}
+                className="w-full flex items-center justify-center gap-2 text-white text-[10px] font-black uppercase tracking-widest py-4 rounded-xl transition-all disabled:opacity-50"
+                style={{ background: D.bg, border: `1px solid ${D.border}` }}
+                onMouseEnter={e => ((e.currentTarget as HTMLButtonElement).style.borderColor = D.accent)}
+                onMouseLeave={e => ((e.currentTarget as HTMLButtonElement).style.borderColor = D.border)}>
                 {searching ? <Loader2 className="animate-spin" size={14} /> : <Search size={14} />} Autolocalizar
             </button>
-            <div className="grid grid-cols-2 gap-4 opacity-40">
-                <input name="lat" type="hidden" value={lat} />
-                <input name="lng" type="hidden" value={lng} />
-                <div className="text-[10px] font-mono">LAT: {lat || '...'}</div>
-                <div className="text-[10px] font-mono">LNG: {lng || '...'}</div>
+
+            <input name="lat" type="hidden" value={lat} />
+            <input name="lng" type="hidden" value={lng} />
+            <div className="flex gap-6 text-[10px] font-mono" style={{ color: D.dim, opacity: 0.4 }}>
+                <span>LAT: {lat || '—'}</span><span>LNG: {lng || '—'}</span>
             </div>
         </div>
     )
