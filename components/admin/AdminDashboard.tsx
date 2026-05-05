@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useRef, forwardRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Band, Event } from '@/types'
 import { Pencil, Trash2, Plus, Calendar, Music, X, Save, Loader2, Search, Tag } from 'lucide-react'
@@ -52,14 +52,30 @@ export default function AdminDashboard({ initialBands, initialEvents }: AdminDas
         const formData = new FormData(e.currentTarget)
         const rawData = Object.fromEntries(formData.entries()) as Record<string, any>
         const table = formType === 'band' ? 'bands' : 'events'
+        
         const cleanData: any = { ...rawData }
-        if (formType === 'band') cleanData.slug = generateSlug(cleanData.name)
+        if (formType === 'band') {
+            cleanData.slug = generateSlug(cleanData.name)
+        } else {
+            // Convertir coordenadas a números o null
+            cleanData.lat = cleanData.lat ? parseFloat(cleanData.lat) : null
+            cleanData.lng = cleanData.lng ? parseFloat(cleanData.lng) : null
+            if (isNaN(cleanData.lat)) cleanData.lat = null
+            if (isNaN(cleanData.lng)) cleanData.lng = null
+        }
+
         delete cleanData.id
         startTransition(async () => {
             try {
                 const r = await saveRecord(table, cleanData, editingItem?.id)
-                if (r.success) { setIsPanelOpen(false); router.refresh() }
-            } catch (err: any) { alert('Error: ' + err.message) }
+                if (r.success) { 
+                    setIsPanelOpen(false)
+                    setEditingItem(null)
+                    router.refresh() 
+                }
+            } catch (err: any) { 
+                alert('Error al guardar: ' + err.message) 
+            }
         })
     }
 
@@ -138,8 +154,8 @@ export default function AdminDashboard({ initialBands, initialEvents }: AdminDas
                         </div>
                         <form onSubmit={handleSave} className="flex-1 overflow-y-auto p-8 space-y-8">
                             {formType === 'band'
-                                ? <BandFormFields item={editingItem as Band | null} />
-                                : <EventFormFields item={editingItem as Event | null} bands={initialBands} />}
+                                ? <BandFormFields key={editingItem?.id || 'new-band'} item={editingItem as Band | null} />
+                                : <EventFormFields key={editingItem?.id || 'new-event'} item={editingItem as Event | null} bands={initialBands} />}
                             <button type="submit" disabled={isPending}
                                 className="w-full flex items-center justify-center gap-2 text-white font-black uppercase tracking-widest py-4 rounded-xl transition-all disabled:opacity-50"
                                 style={{ background: `linear-gradient(135deg, ${D.accent}, #8b5cf6)`, boxShadow: `0 0 20px rgba(99,102,241,0.3)` }}>
@@ -226,15 +242,24 @@ function IconBtn({ onClick, children, hoverColor }: { onClick: () => void; child
 }
 
 // --- INPUTS REUTILIZABLES ---
-function DarkInput({ name, defaultValue, required, placeholder, type = 'text', style: extra = {} }: any) {
+const DarkInput = forwardRef<HTMLInputElement, any>(({ name, defaultValue, required, placeholder, type = 'text', style: extra = {}, ...props }, ref) => {
     return (
-        <input name={name} type={type} defaultValue={defaultValue} required={required} placeholder={placeholder}
+        <input 
+            ref={ref}
+            name={name} 
+            type={type} 
+            defaultValue={defaultValue} 
+            required={required} 
+            placeholder={placeholder}
             className="w-full rounded-xl px-4 py-3 text-sm font-medium outline-none transition-all duration-200"
             style={{ background: D.bg, border: `1px solid ${D.border}`, color: D.text, ...extra }}
             onFocus={e => (e.target.style.borderColor = D.accent)}
-            onBlur={e => (e.target.style.borderColor = D.border)} />
+            onBlur={e => (e.target.style.borderColor = D.border)}
+            {...props}
+        />
     )
-}
+})
+DarkInput.displayName = 'DarkInput'
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
     return <label className="text-[10px] font-black uppercase tracking-widest ml-1" style={{ color: D.dim }}>{children}</label>
@@ -257,18 +282,37 @@ function EventFormFields({ item, bands }: { item: Event | null; bands: Band[] })
     const [lat, setLat] = useState(item?.lat?.toString() || '')
     const [lng, setLng] = useState(item?.lng?.toString() || '')
     const [searching, setSearching] = useState(false)
+    
+    const venueRef = useRef<HTMLInputElement>(null)
+    const cityRef = useRef<HTMLInputElement>(null)
 
     const findCoordinates = async () => {
-        const venue = (document.getElementsByName('venue_name')[0] as HTMLInputElement).value
-        const city = (document.getElementsByName('city')[0] as HTMLInputElement).value
-        if (!venue || !city) return
+        const venue = venueRef.current?.value
+        const city = cityRef.current?.value
+        
+        if (!venue || !city) {
+            alert('Por favor, introduce el recinto y la ciudad')
+            return
+        }
+
         setSearching(true)
         try {
-            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(venue + ', ' + city + ', Spain')}`)
+            const query = `${venue}, ${city}, Spain`
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`)
             const data = await res.json()
-            if (data?.[0]) { setLat(data[0].lat); setLng(data[0].lon) }
-        } catch { }
-        setSearching(false)
+            
+            if (data && data.length > 0) {
+                setLat(data[0].lat)
+                setLng(data[0].lon)
+            } else {
+                alert('No se encontraron coordenadas para esta ubicación. Prueba a ser más específico.')
+            }
+        } catch (error) {
+            console.error('Error in findCoordinates:', error)
+            alert('Error al buscar la ubicación. Revisa tu conexión.')
+        } finally {
+            setSearching(false)
+        }
     }
 
     return (
@@ -300,10 +344,26 @@ function EventFormFields({ item, bands }: { item: Event | null; bands: Band[] })
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2"><FieldLabel>Recinto</FieldLabel>
-                    <DarkInput name="venue_name" defaultValue={item?.venue_name} required /></div>
-                <div className="space-y-2"><FieldLabel>Ciudad</FieldLabel>
-                    <DarkInput name="city" defaultValue={item?.city} required /></div>
+                <div className="space-y-2">
+                    <FieldLabel>Recinto</FieldLabel>
+                    <DarkInput 
+                        ref={venueRef}
+                        name="venue_name" 
+                        defaultValue={item?.venue_name} 
+                        required 
+                        placeholder="Nombre de la sala"
+                    />
+                </div>
+                <div className="space-y-2">
+                    <FieldLabel>Ciudad</FieldLabel>
+                    <DarkInput 
+                        ref={cityRef}
+                        name="city" 
+                        defaultValue={item?.city} 
+                        required 
+                        placeholder="Ciudad"
+                    />
+                </div>
             </div>
 
             <button type="button" onClick={findCoordinates} disabled={searching}
