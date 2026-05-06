@@ -2,28 +2,31 @@
 @import "tailwindcss";
 
 /* ============================================
-   BASE DARK MODE GLOBAL
+   BASE DARK MODE GLOBAL 
    ============================================ */
 
 :root {
-  --bg-base:    #0f172a;
+  --bg-base: #0f172a;
   --bg-surface: #1e293b;
-  --bg-deep:    #0a1020;
-  --border:     #334155;
-  --text-primary:   #e2e8f0;
+  --bg-deep: #0a1020;
+  --border: #334155;
+  --text-primary: #e2e8f0;
   --text-secondary: #94a3b8;
-  --text-muted:     #475569;
-  --accent:     #6366f1;
-  --accent-glow: rgba(99,102,241,0.35);
+  --text-muted: #475569;
+  --accent: #6366f1;
+  --accent-glow: rgba(99, 102, 241, 0.35);
 }
 
-html, body {
+html,
+body {
   background-color: var(--bg-base);
   color: var(--text-primary);
 }
 
 /* Inputs y selects - base oscura para evitar blancos del sistema */
-input, textarea, select {
+input,
+textarea,
+select {
   background-color: var(--bg-base);
   color: var(--text-primary);
   border-color: var(--border);
@@ -40,13 +43,16 @@ textarea::placeholder {
   width: 6px;
   height: 6px;
 }
+
 ::-webkit-scrollbar-track {
   background: var(--bg-base);
 }
+
 ::-webkit-scrollbar-thumb {
   background: var(--border);
   border-radius: 3px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
   background: var(--accent);
 }
@@ -114,7 +120,7 @@ textarea::placeholder {
   top: 50%;
   margin: -15px 0 0 -15px;
   border: 2px solid white;
-  box-shadow: 0 0 10px rgba(0,0,0,0.2);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
 }
 
 .marker-dot {
